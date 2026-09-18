@@ -11,6 +11,8 @@ drive a simulated turtle, see how ROS programs talk to each other, build your ow
 
 Please finish this **before** you come. The download is several GB and campus Wi-Fi can't handle everyone at once.
 
+Extra background (optional): [docs/onboarding/](docs/onboarding/) — system requirements and WSL, Git and GitHub, Docker, and cloning, from the club's robot project onboarding.
+
 ## 2. At the workshop — follow along
 
 👉 **[docs/02-workshop.md](docs/02-workshop.md)**
@@ -34,7 +36,8 @@ ros2-workshop/
 ├── docs/
 │   ├── 01-install.md        ← do before the workshop
 │   ├── 02-workshop.md       ← follow along in the workshop
-│   └── instructor-notes.md  ← for the presenter
+│   ├── instructor-notes.md  ← for the presenter
+│   └── onboarding/          ← optional background from the robot project (01–04)
 └── ws/                      ← the ROS workspace (shows up as ~/ws in the ROS desktop)
     └── src/
         └── workshop_demos/  ← demo package: turtle driver + RViz robot demo

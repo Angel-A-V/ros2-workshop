@@ -117,7 +117,7 @@ git --version
 
 ```bash
 cd ~
-git clone https://github.com/Robotics-Society-at-UC-Merced/ros2-workshop.git
+git clone https://github.com/Angel-A-V/ros2-workshop.git
 cd ros2-workshop
 ls
 ```

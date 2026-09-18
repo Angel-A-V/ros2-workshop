@@ -7,9 +7,7 @@
 
 ## A. Put the repo on GitHub
 
-1. On GitHub, create a **new, public, empty** repository named **`ros2-workshop`** in the **Robotics-Society-at-UC-Merced** organization.
-   Don't add a README, .gitignore or license (this folder already has them).
-   If you use a different name or account, find-and-replace the URL in `docs/01-install.md` (Step 4).
+1. The repo is <https://github.com/Angel-A-V/ros2-workshop> (public). Members clone it with the URL in `docs/01-install.md` (Step 4).
 2. Push this folder:
 
    **MAC — Terminal**
@@ -20,7 +18,7 @@
    git add .
    git commit -m "ROS 2 workshop: install guide, follow-along guide, demo package"
    git branch -M main
-   git remote add origin https://github.com/Robotics-Society-at-UC-Merced/ros2-workshop.git
+   git remote add origin https://github.com/Angel-A-V/ros2-workshop.git
    git push -u origin main
    ```
 
@@ -36,7 +34,7 @@ Nothing here has been run yet, so do a full test run on your Mac.
 ```bash
 docker rm -f ros            # removes your old hand-made test container, if it still exists
 cd ~
-git clone https://github.com/Robotics-Society-at-UC-Merced/ros2-workshop.git
+git clone https://github.com/Angel-A-V/ros2-workshop.git
 cd ros2-workshop
 docker compose pull
 docker image inspect tiryoh/ros2-desktop-vnc:humble --format '{{.Architecture}}'   # should say arm64 on an Apple-chip Mac
@@ -65,7 +63,7 @@ Afterwards, delete your test package so it doesn't end up in the repo: `rm -rf ~
 Hi everyone! For the ROS 2 workshop, please do the install at home BEFORE you come.
 It takes about 45 minutes, mostly downloads, and campus Wi-Fi can't handle all of us downloading at once.
 
-Guide: https://github.com/Robotics-Society-at-UC-Merced/ros2-workshop/blob/main/docs/01-install.md
+Guide: https://github.com/Angel-A-V/ros2-workshop/blob/main/docs/01-install.md
 
 You're done when you see the turtle in your browser (Step 6).
 Stuck? Screenshot the error and bring it — we'll fix it together at the start.
