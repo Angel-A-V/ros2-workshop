@@ -1,0 +1,20 @@
+# ROS 2 Workshop desktop (Humble) — Robotics Society at UC Merced
+#
+#   Start:  docker compose up -d        (run inside the ros2-workshop folder)
+#   Open:   http://localhost:6080       (a full Ubuntu desktop in your browser)
+#   Stop:   docker compose stop
+#
+# The folder ros2-workshop/ws on your laptop is the folder ~/ws inside the desktop.
+# Edit code on your laptop, build and run it in the desktop.
+
+services:
+  ros:
+    image: tiryoh/ros2-desktop-vnc:humble   # Ubuntu 22.04 + ROS 2 Humble desktop (RViz, turtlesim, rqt, colcon)
+    container_name: ros-workshop
+    ports:
+      - "6080:80"                            # browser desktop at http://localhost:6080
+    shm_size: "512m"                         # RViz needs shared memory
+    security_opt:
+      - seccomp:unconfined                   # prevents black/blank GUI windows on Docker Desktop (image maintainer's advice)
+    volumes:
+      - ./ws:/home/ubuntu/ws
