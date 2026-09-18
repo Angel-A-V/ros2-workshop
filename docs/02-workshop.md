@@ -5,6 +5,7 @@
 
 What you will do:
 
+0. Learn how ROS 2 works: nodes, topics, messages (next section)
 1. Start the ROS desktop
 2. Drive a turtle and see how ROS programs talk to each other
 3. Build a ROS workspace with `colcon build`
@@ -23,6 +24,65 @@ What you will do:
 
 A file you save in `ros2-workshop/ws` on your laptop shows up instantly in `~/ws` in the ROS desktop, and the other way around.
 Keep all your work in `~/ws`. Files saved elsewhere in the ROS desktop can be lost.
+
+---
+
+## How ROS 2 works (read this first)
+
+### A robot is many small programs
+
+A robot's software has to **sense** (cameras, lasers, joysticks), **think** (find objects, plan a path) and **act** (drive motors), all at the same time.
+Instead of one giant program, ROS 2 splits this into many small programs called **nodes**. Each node does one job.
+
+Here is a simple autonomous robot:
+
+```text
+ Camera Node  ──/camera/image──▶  Vision Node  ──/detected_objects──▶  Navigation Node  ──/cmd_vel──▶  Motor Controller
+   (sense)                         (think)                               (decide)                         (act)
+```
+
+- The **boxes** are **nodes**: separate programs, one job each.
+- The **arrows** are **topics**: named channels the data flows through.
+- Each piece of data on a topic is a **message**. For example, one message on `/cmd_vel` says "go forward at 0.5 m/s and turn at 0.2 rad/s".
+
+### Publishers and subscribers
+
+| Word | Meaning | In the example above |
+|---|---|---|
+| **Node** | One program with one job | Camera Node, Vision Node, … |
+| **Topic** | A named channel, like a group chat | `/camera/image`, `/cmd_vel` |
+| **Message** | One piece of data on a topic, with a fixed type (shape) | One image; one velocity command |
+| **Publisher** | A node that **sends** messages on a topic | Navigation Node publishes on `/cmd_vel` |
+| **Subscriber** | A node that **listens** to a topic | Motor Controller subscribes to `/cmd_vel` |
+
+Why this is useful:
+
+- **Publishers don't know who is listening.** You can add a new node (a logger, a display) without changing anyone else's code.
+- **Nodes are independent.** If the vision node crashes, the camera keeps running. Buy a better camera, and you replace one box.
+- **Nodes find each other automatically.** There is no central server to start. Run two nodes and they connect by topic name.
+- **Teams can work in parallel.** The vision team and the navigation team only need to agree on the topic name and message type.
+
+### Other ways nodes talk
+
+| Tool | Think of it as | Example |
+|---|---|---|
+| **Topic** | A group chat: a nonstop stream of messages | Camera images, velocity commands |
+| **Service** | A question with one answer | "Spawn a turtle" → "done" |
+| **Action** | A long task with progress updates you can cancel | "Drive to the door" → "50%… 80%… arrived" |
+| **Parameter** | A setting you can change while a node runs | The robot's top speed |
+| **Launch file** | A startup script | Start 5 nodes with one command |
+
+In this workshop you will use topics, a service, parameters and launch files, and see each one live.
+
+### How this maps to what you'll do today
+
+| Robot | Today in turtlesim |
+|---|---|
+| Navigation Node (decides how to move) | `turtle_teleop_key` (your arrow keys) or our `draw_circle` code |
+| `/cmd_vel` topic | `/turtle1/cmd_vel` topic |
+| Motor Controller (moves the wheels) | `turtlesim_node` (moves the turtle) |
+
+The club's real robot works the same way: `game controller node → driving logic node → motor driver nodes → motors`.
 
 ---
 
@@ -72,6 +132,13 @@ Click inside **Tab 2** and press the **arrow keys**. The turtle moves.
 
 > Arrow keys only work while Tab 2 is selected. If the turtle doesn't move, click Tab 2 again.
 
+> 💡 **What just happened?** You started **two nodes**, two separate programs.
+> `turtle_teleop_key` reads your keyboard and **publishes** velocity messages.
+> `turtlesim_node` **subscribes** to those messages and moves the turtle.
+> You never told them about each other. They found each other because they use the same **topic name**.
+>
+> `ros2 run <package> <program>` means "start this program from this package". `turtlesim` is the package; `turtlesim_node` and `turtle_teleop_key` are programs inside it.
+
 ### 2.2 Look inside
 
 **Tab 3:**
@@ -98,6 +165,26 @@ ros2 topic echo /turtle1/cmd_vel
 Drive with the arrow keys in Tab 2 and watch Tab 3. Each key press is a message: a **linear** (forward) speed and an **angular** (turning) speed.
 Stop the echo with **Ctrl + C**.
 
+Now ask ROS **about** the topic:
+
+```bash
+ros2 topic info /turtle1/cmd_vel
+```
+
+It shows the topic's **message type** (`geometry_msgs/msg/Twist`), how many nodes **publish** on it, and how many **subscribe** to it.
+
+See what a `Twist` message contains:
+
+```bash
+ros2 interface show geometry_msgs/msg/Twist
+```
+
+A `Twist` is two sets of `x, y, z` numbers: **linear** (moving) and **angular** (turning). The turtle only uses `linear.x` (forward/back) and `angular.z` (turn left/right).
+Real robots use this **same message type** for velocity commands.
+
+> 💡 **Why this matters:** `ros2 topic echo` is a **subscriber you control from the terminal**. It's the #1 debugging tool:
+> "Is my node actually sending anything? What values?" You'll use it constantly on the real robot.
+
 ### 2.3 See the whole system
 
 ```bash
@@ -106,6 +193,9 @@ rqt_graph
 
 You see: `/teleop_turtle` → `/turtle1/cmd_vel` → `/turtlesim`. The ovals are **nodes**. The arrow is the **topic**.
 Close the rqt window when done.
+
+> 💡 Compare it with the robot diagram at the top of this page: `/teleop_turtle` is the "navigation node", `/turtle1/cmd_vel` is `/cmd_vel`,
+> and `/turtlesim` is the "motor controller". Same pattern, simpler robot.
 
 ### 2.4 Be the controller yourself
 
@@ -117,6 +207,10 @@ ros2 topic pub --once /turtle1/cmd_vel geometry_msgs/msg/Twist "{linear: {x: 2.0
 
 Change the numbers and run it again. Negative `z` turns the other way.
 
+> 💡 **What just happened?** The terminal became a **publisher**. The turtle doesn't care whether messages come from the keyboard node,
+> from code, or from you typing: anything that publishes a `Twist` on `/turtle1/cmd_vel` can drive it.
+> That's how we can test robot code with fake inputs before the real robot is involved.
+
 ### 2.5 Services: ask a node to do something
 
 Topics are a stream of messages. A **service** is a single request with a reply. Ask turtlesim for a second turtle:
@@ -124,6 +218,10 @@ Topics are a stream of messages. A **service** is a single request with a reply.
 ```bash
 ros2 service call /spawn turtlesim/srv/Spawn "{x: 2.0, y: 2.0, theta: 0.0, name: 'turtle2'}"
 ```
+
+> 💡 **Topic vs service:** a topic is a stream nobody replies to. A service is a request that waits for a reply,
+> and here the reply is the new turtle's name. Use services for "do this one thing" (reset, spawn, save a map).
+> List all services with `ros2 service list`.
 
 Now stop everything: **Ctrl + C** in Tab 1 and Tab 2.
 
@@ -133,6 +231,19 @@ Now stop everything: **Ctrl + C** in Tab 1 and Tab 2.
 
 A **package** is a folder of ROS code. A **workspace** is a folder of packages. **`colcon build`** builds every package in the workspace.
 `~/ws` already contains one package, `workshop_demos`.
+
+```text
+ws/                      ← the workspace: you ALWAYS build from here
+├── src/                 ← source code: the only folder you edit
+│   └── workshop_demos/  ← a package
+│       ├── package.xml         ← the package's "ID card": name + what it depends on
+│       ├── setup.py            ← tells the build which programs this package provides
+│       ├── workshop_demos/     ← the Python code (nodes)
+│       └── launch/             ← launch files
+├── build/    ┐
+├── install/  ├─ created by colcon build. Never edit these.
+└── log/      ┘
+```
 
 **Tab 1:**
 
@@ -160,6 +271,15 @@ source install/setup.bash
 > ⚠️ **Remember this rule:** after every build, **and in every new tab**, run `source ~/ws/install/setup.bash`.
 > Most "package not found" errors come from forgetting it.
 
+> 💡 **What do these two commands actually do?**
+>
+> - **`colcon build`** finds every package in `src/`, builds it, and puts the runnable result in `install/`.
+>   If you change your code, **build again**, or ROS keeps running the old version.
+> - **`source install/setup.bash`** tells **this terminal** "also look in `install/` for ROS packages". Without it, the terminal
+>   only knows about the built-in ROS packages, so yours shows up as "not found". It only affects the tab you run it in.
+>
+> The loop: **edit → build → source → run.**
+
 ### 3.1 Launch several nodes with one command
 
 A **launch file** starts several nodes at once. This one starts turtlesim and our `draw_circle` node:
@@ -179,8 +299,41 @@ ros2 param set /draw_circle speed 4.0
 ros2 param set /draw_circle turn -2.0
 ```
 
-Now read the code. On your **laptop**, open `ros2-workshop/ws/src/workshop_demos/workshop_demos/draw_circle.py`.
-It is about 20 lines: create a publisher, then send a message 10 times per second.
+> 💡 **Launch file:** `turtle_demo.launch.py` is a short Python file listing which nodes to start.
+> On the real robot, one launch file starts the controller, the driving logic and the motor drivers together.
+>
+> **Parameters** are a node's settings. You just changed them **without restarting or editing code**. On a robot, that's how you tune things like top speed.
+
+#### Read the code: what a node looks like
+
+On your **laptop**, open `ros2-workshop/ws/src/workshop_demos/workshop_demos/draw_circle.py`. The important parts:
+
+```python
+class DrawCircle(Node):                                   # 1. Our program is a ROS "Node"
+
+    def __init__(self):
+        super().__init__('draw_circle')                   # 2. Give the node a name (what `ros2 node list` shows)
+        self.declare_parameter('speed', 2.0)              # 3. Settings you can change with `ros2 param set`
+        self.declare_parameter('turn', 1.0)
+        self.publisher = self.create_publisher(           # 4. "I will PUBLISH Twist messages on /turtle1/cmd_vel"
+            Twist, '/turtle1/cmd_vel', 10)
+        self.timer = self.create_timer(0.1, self.send_command)  # 5. Call send_command every 0.1 s (10 times per second)
+
+    def send_command(self):
+        msg = Twist()                                     # 6. Make an empty velocity message
+        msg.linear.x = float(self.get_parameter('speed').value)   #    forward speed
+        msg.angular.z = float(self.get_parameter('turn').value)   #    turning speed
+        self.publisher.publish(msg)                       # 7. Send it
+
+
+def main(args=None):
+    rclpy.init(args=args)                                 # 8. Start ROS
+    node = DrawCircle()
+    rclpy.spin(node)                                      # 9. Keep running and let the timer fire until Ctrl + C
+```
+
+That's the whole pattern: **create a node → create a publisher → publish messages**. A subscriber is the mirror image:
+`self.create_subscription(Twist, '/turtle1/cmd_vel', self.callback, 10)`, and ROS calls `callback(msg)` every time a message arrives.
 
 Stop with **Ctrl + C** in Tab 1.
 
@@ -198,6 +351,9 @@ ros2 pkg create --build-type ament_python --node-name hello_node my_first_pkg
 ```
 
 ROS generates a package called `my_first_pkg` with a ready-to-run Python node, `hello_node`.
+
+> 💡 `ros2 pkg create` writes the boilerplate for you: `package.xml`, `setup.py`, and a starter file at
+> `my_first_pkg/my_first_pkg/hello_node.py`. `--node-name hello_node` also registers it as a program you can `ros2 run`.
 
 ### 4.2 Build it and run it
 
@@ -270,6 +426,15 @@ RViz opens with a simulated robot:
 
 Move the view: **left-drag** to rotate, **scroll** to zoom, **Shift + left-drag** to pan.
 Untick and tick the boxes in the **Displays** panel on the left.
+
+> 💡 **What is RViz actually doing?** RViz is just another node. It **subscribes** to topics like `/scan` and `/joint_states`
+> and draws what it receives. It doesn't simulate anything. If a topic stops publishing, that display goes blank.
+>
+> - The **robot model** (URDF) is a description of the robot's parts and joints.
+> - **TF frames** track where every part is relative to every other part: "the laser is 10 cm above joint 2".
+>   Robots need this to turn "the laser saw something 1 m ahead" into "there's an obstacle at this spot in the room".
+>
+> Run `rqt_graph` in Tab 2: RViz shows up as a node subscribed to the robot's topics.
 
 **Tab 2** — the same data as text:
 
